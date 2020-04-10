@@ -1,8 +1,5 @@
-import socket, threading, Queue, sys, random, os, time
-import pyaudio, matplotlib, wave, struct, math, numpy
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-import collections
+import socket, threading, Queue, time
+import numpy as np
 
 class Server():
 	def __init__(self, port):
@@ -12,41 +9,38 @@ class Server():
 		sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		sock.bind((host,port))
 		clients = set()
-		recvPackets = Queue.Queue()
+		buff = Queue.Queue()
 		print('Server Running...')
-		self.stop = False
-		threading.Thread(target=self.recvData,args=(sock,recvPackets)).start()
+		threading.Thread(target=self.recvData,args=(sock,buff)).start()
 
 		while True:
-			time.sleep(0.020)
-			while not recvPackets.empty():
-				data,addr = recvPackets.get()
+			time.sleep(0.001)
+			while not buff.empty():
+				data,addr = buff.get()
 
 				if addr not in clients:
 					clients.add(addr)
 					print(addr, "Connected")
-
-				print(addr, len(data))
 
 				if data.endswith('qqq'):
 					clients.remove(addr)
 					print(addr, "Diconnected")
 					continue
 
-				for c in clients:
+				for index, c in enumerate(clients):
 					try:
-						sock.sendto(data,c)
+						sock.sendto(data, c)
 					except:
 						pass
 
-
-
-	def recvData(self, sock, recvPackets):
+	def recvData(self, sock, buff):
 		while True:
-			if self.stop:
-				break
-			data,addr = sock.recvfrom(4410	)
-			recvPackets.put((data,addr))
+			try:
+				data, addr = sock.recvfrom(4410)
+				buff.put((data,addr))
+			except:
+				pass
 
 
-Server(5000)
+server = Server(5000)
+

@@ -1,14 +1,19 @@
-import socket, threading, Queue, sys, random, os, time
-import pyaudio, matplotlib, wave, struct, math, numpy
+# python interface.py
+import pyaudio, matplotlib, socket, random, time
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-import collections
-
-from mic import Mic
-from player import Player
+import numpy as np
 
 from matplotlib.widgets import TextBox
 from matplotlib.widgets import Button
+
+from np_rw_buffer import RingBuffer
+from multiprocessing import Process
+from threading import Thread
+
+from mic import Mic
+from speaker import Speaker
+from modem import Modem
 
 class Client():
 	def __init__(self):
@@ -17,75 +22,97 @@ class Client():
 		self.sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 		self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.sock.bind((client_ip,client_port))
-		self.buffers = {}
+		self.buff = RingBuffer((4410 * 10), dtype=np.int16)
+		self.buff.write([0] * (4410 * 10))
 		self.connected = False
 		
-	def getBuffers(self):
-		return self.buffers
+	def getBuffer(self):
+		return self.buff
+
+	def isConnected(self):
+		return self.connected
 		
-	def connect(self, ip, port):
+	def connect(self, ip, port=5000):
 		self.connected = True
 		self.server = (ip,port)
-		threading.Thread(target=self.recvData,args=(self.sock, lambda : self.connected)).start()
+		Thread(target=self.recvData).start()
 		
 	def send(self, data):
 		self.sock.sendto(data, self.server)
 		
 	def disconnect(self):
 		self.connected = False
+		time.sleep(0.1)
 		self.sock.sendto(str('qqq').encode('utf-8'), self.server)
 		self.sock.close()
 		
-	def recvData(self, sock, isConnected):
-		while True:
-			if not isConnected(): break
+	def recvData(self):
+		while self.connected:
 			try:
-				data,addr = sock.recvfrom(4410)
-				if addr in self.buffers:
-					count = len(data)/2
-					format = "%dh"%(count)
-					values =  struct.unpack(format, data)
-					for val in values:
-						self.buffers[addr].append(val)
-				else:
-					self.buffers[addr] = collections.deque(maxlen=44100)
+				data,addr = self.sock.recvfrom(4412)
+				values = np.fromstring(data, dtype=np.int16)
+				self.buff.read(2205)
+				self.buff.write(values)
 			except:
 				pass
 
+class App():
+	def __init__(self):
+		self.fig, self.axes = plt.subplots(6, 1, figsize=[6,8])
+		for i in range(6):
+			self.axes[i].axes.xaxis.set_visible(False)
+			self.axes[i].axes.yaxis.set_visible(False)
 
+		self.input_ip       = TextBox(plt.axes([0.1,  0.05, 0.4, 0.05]), '', initial='192.168.0.20')
+		self.btn_connect    =  Button(plt.axes([0.5,  0.05, 0.2, 0.05]), 'Connect')
+		self.btn_disconnect =  Button(plt.axes([0.7,  0.05, 0.2, 0.05]), 'Disconnect')
+		self.btn_connect.on_clicked(self.connect)
+		self.btn_disconnect.on_clicked(self.disconnect)
+		self.mic     = Mic()
+		self.speaker = Speaker()
+		self.client  = None
+		self.anim    = None
+		self.modem   = Modem()
+		plt.show()
 
-mic = Mic()
-player = Player()
-client = Client()
-client.connect('192.168.0.20', 5000)
-client.send(mic.read())
-client.send(mic.read())
-ip = '127.0.0.1'
-fig = plt.figure()
+	def connect(self, event):
+		self.client = Client()
+		self.client.connect(self.input_ip.text)
+		Thread(target=self.sendData).start()
+		Thread(target=self.playSound).start()
 
-def sendData(client, mic):
-	while True:
-		time.sleep(0.001)
-		client.send(mic.read())
+	def disconnect(self, event):
+		self.client.disconnect()
+		# self.anim.event_source.stop()
 
-def animate(i):
-	global client
-	buffers = client.getBuffers()
-	for index, cli in enumerate(buffers):
-		_, _, _, im = plt.specgram(buffers[cli], Fs=44100, NFFT=2**10, noverlap=900)
-		return im,
+	def sendData(self):
+		time.sleep(0.01)
+		while self.client.isConnected():
 
-def reproduz(client, player):
-	while True:
-		buffers = client.getBuffers()
-		for index, cli in enumerate(buffers):
-			data = buffers[cli]
-			count = len(data)
-			format = "%dh"%(count)
-			sound = struct.pack(format, *data)
-			player.play(sound)
+			entrada = self.mic.read()
+			mod = self.modem.modFm(entrada)
+			self.client.send(mod)
 
-threading.Thread(target=reproduz, args=(client, player)).start()
-threading.Thread(target=sendData, args=(client, mic)).start()
-ani = animation.FuncAnimation(fig, animate, interval=1, blit=True)
-plt.show()
+	def playSound(self):
+		time.sleep(0.01)
+		while self.client.isConnected():
+			# import code; code.interact(local=dict(globals(), **locals()))
+			data = self.client.getBuffer().get_data().flatten()
+			print(data)
+			if not len(data): continue
+			mod = data[-4410:]
+			demod = self.modem.demodFm(mod)
+			self.speaker.play(demod)
+
+			# data = np.fromstring(data, dtype=np.int16, count=(2205 * 10))
+			# self.axes[0].cla()
+			# self.axes[0].plot(data, color="black")
+
+			# self.axes[0].cla()
+			# self.axes[0].specgram(data, Fs=44100, window=np.blackman, NFFT=2**10, overlaps=900)
+
+			plt.draw()
+
+matplotlib.rcParams['toolbar'] = 'None'
+App()
+exit()
