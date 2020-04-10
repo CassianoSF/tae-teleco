@@ -1,5 +1,4 @@
-import socket, threading, Queue, time
-import numpy as np
+import socket, threading, Queue
 
 class Server():
 	def __init__(self, port):
@@ -14,7 +13,6 @@ class Server():
 		threading.Thread(target=self.recvData,args=(sock,buff)).start()
 
 		while True:
-			time.sleep(0.001)
 			while not buff.empty():
 				data,addr = buff.get()
 

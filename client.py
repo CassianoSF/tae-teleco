@@ -80,6 +80,7 @@ class App():
 		self.client.connect(self.input_ip.text)
 		Thread(target=self.sendData).start()
 		Thread(target=self.playSound).start()
+		Thread(target=self.updatePlot).start()
 
 	def disconnect(self, event):
 		self.client.disconnect()
@@ -96,17 +97,21 @@ class App():
 	def playSound(self):
 		time.sleep(0.01)
 		while self.client.isConnected():
-			# import code; code.interact(local=dict(globals(), **locals()))
 			data = self.client.getBuffer().get_data().flatten()
-			print(data)
+			print(len(data))
 			if not len(data): continue
-			mod = data[-4410:]
+			mod = data[-2205:]
 			demod = self.modem.demodFm(mod)
 			self.speaker.play(demod)
 
-			# data = np.fromstring(data, dtype=np.int16, count=(2205 * 10))
-			# self.axes[0].cla()
-			# self.axes[0].plot(data, color="black")
+
+	def updatePlot(self):
+		time.sleep(0.01)
+		while self.client.isConnected():
+			data = self.client.getBuffer().get_data().flatten()
+			data = np.fromstring(data, dtype=np.int16, count=(4410 * 10))
+			self.axes[0].cla()
+			self.axes[0].plot(data, color="black")
 
 			# self.axes[0].cla()
 			# self.axes[0].specgram(data, Fs=44100, window=np.blackman, NFFT=2**10, overlaps=900)
