@@ -13,10 +13,10 @@ while True:
 	# modulado   =  modem.modAm(entrada)
 	# demodulado = modem.demodAm(modulado)
 
-	modulado   =  modem.modAmsc(entrada)
-	demodulado = modem.demodAmsc(modulado)
+	# modulado   =  modem.modAmsc(entrada)
+	# demodulado = modem.demodAmsc(modulado)
 
-	# modulado   = modem.modFm(entrada)
-	# demodulado = modem.demodFm(modulado)
+	modulado   = modem.modFm(entrada)
+	demodulado = modem.demodFm(modulado)
 
 	speaker.play(demodulado)

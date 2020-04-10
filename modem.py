@@ -6,59 +6,69 @@ import math
 
 class Modem():
 	def __init__(self):
-		order = 2
-		fs = 44100
-		cutoff = 500
-		nyq = fs / 10.0 # <<- Minimo 2.0
-		normal_cutoff = cutoff / nyq
-		am_carrier_freq = 3000
-		self.fm_carrier_freq = 10000.0
-		self.fm_desviation = 1000.0
-		self.low_pass_a, self.low_pass_b = signal.butter(order, normal_cutoff, btype='low', analog=False)
-		self.am_carrier = np.cos(2*np.pi * np.arange(fs * 0.05) * am_carrier_freq / fs)
-		self.fm_carrier_cos = np.cos(2*np.pi * np.arange(fs * 0.05) * self.fm_carrier_freq / fs)
-		self.fm_carrier_sin = np.sin(2*np.pi * np.arange(fs * 0.05) * self.fm_carrier_freq / fs)
+		self.order = 20
+		self.fs = 44100
+		self.cutoff = 1000.
+		self.nyq = self.fs / 10.
+		self.normal_cutoff = self.cutoff / self.nyq
+		self.am_carrier_freq = 3000.
+		self.fm_carrier_freq = 10000.
+		self.fm_desviation = 1000.
 
-	def lowpass(self, sig):
-		return signal.lfilter(self.low_pass_a, self.low_pass_b, sig)
+	def lowPass(self, sig):
+		low_pass_a, low_pass_b = signal.butter(self.order, self.normal_cutoff, btype='low', analog=False)
+		return signal.lfilter(low_pass_a, low_pass_b, sig)
 
+	def am_carrier(self, data):
+		return np.cos(2*np.pi * np.arange(len(data)) * self.am_carrier_freq / self.fs)
+
+	def fm_carrier(self, data):
+		return ([
+			np.cos(2*np.pi * np.arange(len(data)) * self.fm_carrier_freq / self.fs),
+			np.sin(2*np.pi * np.arange(len(data)) * self.fm_carrier_freq / self.fs)
+		])
+	
 	def modAmsc(self, sig):
 		data = np.fromstring(sig, dtype=np.int16)
 		amp = data * 100
-		filtred = self.lowpass(amp)
-		mod = filtred * self.am_carrier
+		filtred = self.lowPass(amp)
+		mod = filtred * self.am_carrier(data)
 		return mod.astype(np.int16).tobytes()
 
 	def demodAmsc(self, sig):
 		data = np.fromstring(sig, dtype=np.int16)
-		demod = data * self.am_carrier
+		demod = data * self.am_carrier(data)
 		return demod.astype(np.int16).tobytes()
 
 	def modAm(self, sig):
 		data = np.fromstring(sig, dtype=np.int16)
 		amp = data * 100
-		filtred = self.lowpass(amp)
-		mod = filtred * self.am_carrier + self.am_carrier / 2.0
+		filtred = self.lowPass(amp)
+		am_carrier = self.am_carrier(data)
+		mod = filtred * am_carrier + am_carrier / 2.0
 		return mod.astype(np.int16).tobytes()
 
 	def demodAm(self, sig):
 		data = np.fromstring(sig, dtype=np.int16)
 		demod = np.absolute(data, data)
+		demod = self.lowPass(demod)
 		return demod.astype(np.int16).tobytes()
 
 	def modFm(self, sig):
 		data = np.fromstring(sig, dtype=np.int16)
-		filtred = self.lowpass(data) / 255
+		filtred = self.lowPass(data) / 255
 		phase = np.cumsum((filtred * np.pi * self.fm_desviation / 44100) % (2 * np.pi))
-		i = np.cos(phase) * self.fm_carrier_cos
-		q = np.sin(phase) * self.fm_carrier_sin
+		fm_carrier_cos, fm_carrier_sin = self.fm_carrier(data)
+		i = np.cos(phase) * fm_carrier_cos
+		q = np.sin(phase) * fm_carrier_sin
 		mod = (i - q) * 32767
 		return mod.astype(np.int16).tobytes()
 
 	def demodFm(self, sig):
 		data = np.fromstring(sig, dtype=np.int16)
-		istream = self.lowpass(self.fm_carrier_cos * data) 
-		qstream = self.lowpass(self.fm_carrier_sin * data) 
+		fm_carrier_cos, fm_carrier_sin = self.fm_carrier(data)
+		istream = self.lowPass(fm_carrier_cos * data)
+		qstream = self.lowPass(fm_carrier_sin * data)
 		angle = np.arctan2(qstream, istream)
 		angle[1:] -= angle[:-1]
 		angle[angle > np.pi] -= 2 * np.pi
