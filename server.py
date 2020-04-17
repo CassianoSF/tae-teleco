@@ -1,4 +1,4 @@
-import socket, threading, Queue
+import socket, threading, Queue, time
 
 class Server():
 	def __init__(self, port):
@@ -14,6 +14,7 @@ class Server():
 
 		while True:
 			while not buff.empty():
+				time.sleep(0.01)
 				data,addr = buff.get()
 
 				if addr not in clients:

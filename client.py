@@ -146,6 +146,7 @@ class App():
 	def sendData(self):
 		time.sleep(0.01)
 		while self.client.isConnected():
+			time.sleep(0.01)
 			entrada = self.mic.read()
 			mod = self.modulations[self.selectedMod](entrada)
 			self.client.send(mod)
@@ -153,6 +154,7 @@ class App():
 	def playSound(self):
 		time.sleep(0.01)
 		while self.client.isConnected():
+			time.sleep(0.01)
 			data = self.client.getBuffer().get_data().flatten()
 			if not len(data): continue
 			mod = data[-2205:]
@@ -163,6 +165,7 @@ class App():
 	def updatePlot(self):
 		time.sleep(0.01)
 		while self.client.isConnected():
+			time.sleep(0.01)
 			frame = self.client.getBuffer().get_data().flatten()
 			data = np.fromstring(frame, dtype=np.int16)
 			if not len(data): continue

@@ -13,7 +13,3 @@ class Speaker():
 				
 	def play(self,data):
 		self.stream.write(data)
-
-	def stop(self):
-		self.stream.stop_stream()
-		self.stream.close()

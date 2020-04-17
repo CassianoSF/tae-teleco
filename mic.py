@@ -1,8 +1,4 @@
-import pyaudio, matplotlib, wave, struct, math, numpy
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-import collections
-
+import pyaudio
 
 class Mic:
 	def __init__(self):
