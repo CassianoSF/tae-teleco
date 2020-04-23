@@ -30,7 +30,7 @@ class Modem():
 	
 	def modAmsc(self, sig):
 		data = np.fromstring(sig, dtype=np.int16)
-		amp = data * 100
+		amp = data * 10
 		filtred = self.lowPass(amp)
 		mod = filtred * self.am_carrier(data)
 		return mod.astype(np.int16).tobytes()
@@ -42,7 +42,7 @@ class Modem():
 
 	def modAm(self, sig):
 		data = np.fromstring(sig, dtype=np.int16)
-		amp = data * 100
+		amp = data * 10
 		filtred = self.lowPass(amp)
 		am_carrier = self.am_carrier(data)
 		mod = filtred * am_carrier + am_carrier / 2.0
@@ -74,4 +74,4 @@ class Modem():
 		angle[angle > np.pi] -= 2 * np.pi
 		angle[angle < -np.pi] += 2 * np.pi
 		output = angle / (math.pi * self.fm_desviation / 44100)
-		return (output * 32767).astype(np.int16).tobytes()
+		return (output * 3000).astype(np.int16).tobytes()

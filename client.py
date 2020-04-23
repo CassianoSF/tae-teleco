@@ -1,4 +1,3 @@
-# python interface.py
 import matplotlib, socket, random, time
 import matplotlib.pyplot as plt
 import numpy as np
