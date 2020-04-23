@@ -59,6 +59,7 @@ class App():
 		self.modem   = Modem()
 
 		self.selectedMod = 'AM'
+
 		self.modulations = {
 			'AM': self.modem.modAm,
 			'AMSC': self.modem.modAmsc,
