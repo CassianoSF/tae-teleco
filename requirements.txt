@@ -4,7 +4,7 @@ kiwisolver==1.1.0
 matplotlib==2.2.5
 memory-profiler==0.57.0
 np-rw-buffer==1.1.8
-numpy==1.16.6
+numpy==1.22.0
 numpy-ringbuffer==0.2.1
 psutil==5.7.0
 PyAudio==0.2.11
